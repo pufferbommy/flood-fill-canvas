@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flood Fill in Web</title>
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Flood Fill In Web</h1>
+      
+      <fieldset>
+        <legend id="size-label">Box size: 20</legend>
+        <input id="size-input" step="10" type="range" min="10" max="100" value="20" />
+      </fieldset>
+    </div>
+
+    <canvas id="grid"></canvas>
+
+    <script>
+      let canvasWidth = window.innerWidth;
+      let canvasHeight = window.innerHeight;
+
+      const sizeLabel = document.getElementById("size-label");
+      const sizeInput = document.getElementById("size-input");
+      const gridCanvas = document.getElementById("grid");
+      const count = document.getElementById("count");
+
+      const ctx = gridCanvas.getContext("2d");
+
+      let boxSize = sizeInput.value;
+      let grid = generateGrid(canvasWidth, canvasHeight, boxSize);
+      let opacity = 0.1;
+      let color = (opacity) => `rgba(0, 0, 255, ${opacity})`;
+
+      // Initialize canvas size
+      gridCanvas.width = canvasWidth;
+      gridCanvas.height = canvasHeight;
+
+      // Event listeners
+      sizeInput.addEventListener("input", onSizeChange);
+      window.addEventListener("resize", handleResize);
+      gridCanvas.addEventListener("click", handleCanvasClick);
+
+      // Initial rendering
+      renderGrid(grid);
+
+      async function handleCanvasClick(event) {
+        const { pageX, pageY } = event;
+        const startX = Math.floor((pageX - event.target.getBoundingClientRect().left) / boxSize);
+        const startY = Math.floor((pageY - event.target.getBoundingClientRect().top) / boxSize);
+
+        const visited = new Map();
+        const { row, col, text } = grid[startX][startY];
+        const queue = [[row, col]];
+        const animationQueue = [[row, col]];
+
+        visited.set(`${startX}${startY}`, true);
+
+        while (queue.length > 0) {
+          const [x, y] = queue.shift();
+
+          // Check adjacent cells (left, right, up, down)
+          const directions = [
+            [1, 0], // right
+            [-1, 0], // left
+            [0, 1], // down
+            [0, -1] // up
+          ];
+
+          directions.forEach(([dx, dy]) => {
+            const newX = x + dx;
+            const newY = y + dy;
+
+            if (newX < 0 || newX >= grid.length || newY < 0 || newY >= grid[newX].length) return;
+
+            if (grid[newX][newY].text !== text || visited.has(`${newX}${newY}`)) return;
+
+            queue.push([newX, newY]);
+            animationQueue.push([newX, newY]);
+            visited.set(`${newX}${newY}`, true);
+          });
+        }
+
+        animateFloodFill(animationQueue, 0, 1);
+      }
+
+      function animateFloodFill(queue, index, countNumber) {
+        if (index >= queue.length) return;
+
+        const [x, y] = queue[index];
+
+        ctx.fillStyle = color(opacity);
+        opacity = ((opacity + 0.1).toFixed(1) % 0.6) || 0.1;
+        ctx.fillRect(x * boxSize, y * boxSize, boxSize, boxSize);
+
+        ctx.fillStyle = "red";
+        ctx.fillText(index + 1, x * boxSize, y * boxSize, boxSize);
+
+        // Recursive call to animate next cell
+        requestAnimationFrame(() => animateFloodFill(queue, index + 1, countNumber)); // Smooth animation
+      }
+
+      function generateGrid(canvasWidth, canvasHeight, boxSize) {
+        const grid = [];
+        const numRows = Math.floor(canvasWidth / boxSize);
+        const numCols = Math.floor(canvasHeight / boxSize);
+
+        for (let i = 0; i < numRows; i++) {
+          const row = [];
+          for (let j = 0; j < numCols; j++) {
+            row.push({
+              row: i,
+              col: j,
+              text: Math.random() > 0.6 ? "O" : "K",
+            });
+          }
+          grid.push(row);
+        }
+        return grid;
+      }
+
+      function onSizeChange(event) {
+        boxSize = event.target.value;
+        sizeLabel.innerText = `Box size: ${boxSize}`;
+        grid = generateGrid(canvasWidth, canvasHeight, boxSize);
+        renderGrid(grid);
+      }
+
+      function renderGrid(grid) {
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        grid.forEach(row => {
+          row.forEach(cell => {
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "black";
+            ctx.fillText(
+              cell.text,
+              cell.row * boxSize + boxSize / 2,
+              cell.col * boxSize + boxSize / 2
+            );
+          });
+        });
+      }
+
+      function handleResize() {
+        canvasWidth = gridCanvas.width = window.innerWidth;
+        canvasHeight = gridCanvas.height = window.innerHeight;
+        grid = generateGrid(canvasWidth, canvasHeight, boxSize);
+        renderGrid(grid);
+      }
+    </script>
+  </body>
+</html>
